@@ -1,5 +1,7 @@
 import cv2
+import csv
 import numpy as np
+import pandas as pd
 from skimage.segmentation import chan_vese
 from skimage import exposure
 from skimage.measure import label, regionprops
@@ -168,12 +170,89 @@ def compute_color_score(img, mask):
             score += 1
 
     return score
-    
+
+def rotate_to_major_axis(mask):
+    """
+    Rotates the lesion so that:
+      - The MAJOR AXIS is horizontal
+      - The LONGEST DIAMETER lies on the horizontal axis
+    Returns a BGR image with axes + contour drawn.
+    """
+    # Convert to binary boolean mask
+    bin_mask = mask > 0
+
+    # Region properties: centroid, major axis angle, etc
+    labeled = label(bin_mask)
+    props = regionprops(labeled)[0]
+
+    cy, cx = props.centroid
+    orientation = props.orientation   # In radians (measured CCW from horizontal)
+
+    # orientation is negative when object is leaning right
+    angle_deg = -np.degrees(orientation)
+
+    # --- IMPORTANT ---
+    # If the major axis is VERTICAL (≈ ±90°), rotate an extra 90°
+    # This ensures the longest axis becomes horizontal
+    angle_deg += 270 if angle_deg < 0 else 180
+
+    # Apply rotation
+    M = cv2.getRotationMatrix2D((cx, cy), angle_deg, 1.0)
+    rotated = cv2.warpAffine(mask, M, (mask.shape[1], mask.shape[0]))
+
+    # Convert to BGR for drawing
+    vis = cv2.cvtColor(rotated, cv2.COLOR_GRAY2BGR)
+
+    # Recompute centroid after rotation
+    labeled_rot = label(rotated > 0)
+    props_rot = regionprops(labeled_rot)[0]
+    cy_r, cx_r = map(int, props_rot.centroid)
+
+    # Draw horizontal + vertical axes
+    cv2.line(vis, (0, cy_r), (vis.shape[1], cy_r), (0, 255, 0), 2)   # horizontal
+    cv2.line(vis, (cx_r, 0), (cx_r, vis.shape[0]), (0, 255, 0), 2)   # vertical
+
+    # Draw contour on rotated mask
+    contours, _ = cv2.findContours((rotated > 0).astype(np.uint8),
+                                   cv2.RETR_EXTERNAL,
+                                   cv2.CHAIN_APPROX_SIMPLE)
+    cv2.drawContours(vis, contours, -1, (0, 0, 255), 2)
+
+    return vis
+
+def label_from_diagnosis(diagnosis_1):
+    diagnosis = str(diagnosis_1).lower()
+
+    malignant_terms = [
+        "melanoma",
+        "malignant",
+        "carcinoma"
+    ]
+
+    for term in malignant_terms:
+        if term in diagnosis:
+            return 1 
+
+    return 0 
 
 
 
+"""
 if __name__ == "__main__":
-    img = cv2.imread('HAM10000/ISIC_0025234.jpg')
+    csv_file = open("lesion_features.csv", mode="w", newline="")
+    csv_writer = csv.writer(csv_file)
+
+    # Write the column names
+    csv_writer.writerow([
+    "AS1", "AS2",
+    "BI1", "BI2", "BI3",
+    "D1", "D2",
+    "ColorScore",
+    "Label"
+    ])
+    
+    filename = 'HAM10000\ISIC_0035995.jpg'
+    img = cv2.imread(filename)
     if img is not None:
         final_img = remove_hairs(img)
         mask = contour_sauvola(final_img).astype(np.uint8) * 255
@@ -204,5 +283,28 @@ if __name__ == "__main__":
         cv2.imshow("Result", final_img)
         cv2.imshow("Contour Mask", image_countours)
         cv2.imshow("Largest Contour Mask", final_mask)
+        aligned_view = rotate_to_major_axis(final_mask)
+        cv2.imshow("Aligned Lesion with Axes", aligned_view)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+        
+
+        
+        meta = pd.read_csv("ISIC_metadata.csv")
+
+        # Create dictionary: "ISIC_0024306" → "Benign"
+        diagnosis_dict = dict(zip(meta["isic_id"], meta["diagnosis_1"]))
+        
+        img_id = filename.replace(".jpg", "")  # e.g., "ISIC_0035995"
+        diagnosis_1 = diagnosis_dict[img_id]
+
+        label = label_from_diagnosis(diagnosis_1)
+        
+        csv_writer.writerow([
+            AS1, AS2,
+            BI1, BI2, BI3,
+            D1, D2,
+            color_score,
+            label
+        ])
+"""
