@@ -30,7 +30,7 @@ csv_writer.writerow([
 ])
 
 # Choose image to process
-filename = "ISIC_0035995.jpg"
+filename = "ISIC_0024444.jpg"
 img_path = f"HAM10000/{filename}"
 
 img = cv2.imread(img_path)

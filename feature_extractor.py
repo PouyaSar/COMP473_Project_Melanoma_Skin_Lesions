@@ -17,22 +17,18 @@ def remove_hairs(img):
     # Define the kernel (structural element)
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
 
-    # 1. Black Hat Transform (Detects Dark Hairs)
-    # Black Hat = Closing - Original
+    # Black Hat Transform (Detects Dark Hairs)
     blackhat = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, kernel)
     _, blackhat_mask = cv2.threshold(blackhat, 10, 255, cv2.THRESH_BINARY)
     
-    # 2. White Hat Transform (Detects Bright Hairs)
-    # White Hat (Top Hat) = Original - Opening
+    #White Hat Transform (Detects Bright Hairs)
     tophat = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, kernel)
     _, tophat_mask = cv2.threshold(tophat, 30, 255, cv2.THRESH_BINARY) 
     #     # The two transforms work in opposition: Black Hat finds dark lines, White Hat finds bright lines.
 
-    # 3. Combine both masks using OR logic
-    # The combined mask will now contain all dark *and* bright hair pixels
+    #Combine both masks using OR logic
     combined_mask = cv2.bitwise_or(blackhat_mask, tophat_mask)
 
-    # 4. Inpaint using the comprehensive mask
     result = cv2.inpaint(img, combined_mask, 3, cv2.INPAINT_TELEA)
     return result
 
@@ -41,9 +37,9 @@ def contour_sauvola(cleaned_img):
     # Use green channel and convert to grayscale
     img_gray = cleaned_img[:, :, 1]
     
-    # Window size determines are for threshold. Must be odd.
+    # Window size determines are for threshold. Must be odd
     # K controls sensitivity.
-    window_size = 405 # Must be an odd number
+    window_size = 405
     k_sensitivity = 0.1
     
     thresh_sauvola = threshold_sauvola(img_gray, window_size=window_size, k=k_sensitivity)
@@ -237,7 +233,7 @@ if __name__ == "__main__":
     "Label"
     ])
     
-    filename = 'HAM10000\ISIC_0024451.jpg'
+    filename = 'HAM10000\ISIC_0024444.jpg'
     img = cv2.imread(filename)
     if img is not None:
         final_img = remove_hairs(img)

@@ -17,7 +17,7 @@ data = pd.read_csv("lesion_features_batch.csv")
 X = data.drop(columns=["Label"]).values
 y = data["Label"].values.astype(int)     # 0 = benign, 1 = malignant
 
-X = np.delete(X, [0, 1, 2, 3, 4], axis=1) #used for ablation study removing features
+#X = np.delete(X, [0, 1, 2, 3, 4], axis=1) #used for ablation study removing features
 
 
 malignant = np.sum(y)
@@ -53,7 +53,7 @@ class LesionClassifier(nn.Module):
     def __init__(self):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(3, 64),
+            nn.Linear(8, 64),
             nn.ReLU(),
             nn.Dropout(0.2),
 
