@@ -13,15 +13,11 @@ from feature_extractor import (
     label_from_diagnosis
 )
 
-# ---------------------------------------
-# Load metadata FIRST
-# ---------------------------------------
+#Load metadata
 meta = pd.read_csv("collection_212_metadata.csv")
 diagnosis_dict = dict(zip(meta["isic_id"], meta["diagnosis_1"]))
 
-# ---------------------------------------
-# Create CSV output file
-# ---------------------------------------
+
 csv_file = open("lesion_features.csv", mode="w", newline="")
 csv_writer = csv.writer(csv_file)
 
@@ -33,9 +29,7 @@ csv_writer.writerow([
     "Label"
 ])
 
-# ---------------------------------------
 # Choose image to process
-# ---------------------------------------
 filename = "ISIC_0035995.jpg"
 img_path = f"HAM10000/{filename}"
 
@@ -44,9 +38,7 @@ img = cv2.imread(img_path)
 if img is None:
     raise ValueError("Image not found!")
 
-# ---------------------------------------
-# Feature Extraction Pipeline
-# ---------------------------------------
+
 final_img = remove_hairs(img)
 mask = contour_sauvola(final_img).astype(np.uint8) * 255
 
@@ -63,14 +55,10 @@ BI1, BI2, BI3 = compute_border_features(final_mask, largest_contour)
 D1, D2 = compute_diameter_features(final_mask)
 color_score = compute_color_score(img, final_mask)
 
-# Determine label
 img_id = filename.replace(".jpg", "")
 diagnosis_1 = diagnosis_dict[img_id]
 label = label_from_diagnosis(diagnosis_1)
 
-# ---------------------------------------
-# Write to CSV
-# ---------------------------------------
 csv_writer.writerow([
     AS1, AS2,
     BI1, BI2, BI3,

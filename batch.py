@@ -13,15 +13,11 @@ from feature_extractor import (
     label_from_diagnosis
 )
 
-# ---------------------------------------
-# Load metadata FIRST
-# ---------------------------------------
+#Load metadata FIRST
 meta = pd.read_csv("collection_212_metadata.csv")
 diagnosis_dict = dict(zip(meta["isic_id"], meta["diagnosis_1"]))
 
-# ---------------------------------------
-# Create CSV output file
-# ---------------------------------------
+
 csv_file = open("lesion_features_batch.csv", mode="w", newline="")
 csv_writer = csv.writer(csv_file)
 
@@ -33,11 +29,7 @@ csv_writer.writerow([
     "Label"
 ])
 
-# ---------------------------------------
-# Choose image to process
-# ---------------------------------------
-
-for i in range(8000):
+for i in range(10000):
     id = 24444 + i
     filename = "ISIC_00"+str(id)+".jpg"
     img_path = f"HAM10000/{filename}"
@@ -45,19 +37,16 @@ for i in range(8000):
     img = cv2.imread(img_path)
 
     if img is None:
-        raise ValueError("Image not found!")
+        print(f"[WARNING] Could not read image: {img_path}. Skipping...")
+        continue
 
-    # ---------------------------------------
-    # Feature Extraction Pipeline
-    # ---------------------------------------
     final_img = remove_hairs(img)
     mask = contour_sauvola(final_img).astype(np.uint8) * 255
 
-    # Find lesion contour
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
     
-    if not contours:   # or len(contours) == 0
+    if not contours: 
         print(f"Skipping {filename}: no contours found.")
         continue
     largest_contour = sorted(contours, key=cv2.contourArea, reverse=True)[0]
@@ -65,20 +54,16 @@ for i in range(8000):
     final_mask = np.zeros_like(mask)
     cv2.drawContours(final_mask, [largest_contour], 0, (255), thickness=cv2.FILLED)
 
-    # Calculate features
     AS1, AS2 = compute_asymmetry(final_mask)
     BI1, BI2, BI3 = compute_border_features(final_mask, largest_contour)
     D1, D2 = compute_diameter_features(final_mask)
     color_score = compute_color_score(img, final_mask)
 
-    # Determine label
     img_id = filename.replace(".jpg", "")
     diagnosis_1 = diagnosis_dict[img_id]
     label = label_from_diagnosis(diagnosis_1)
 
-    # ---------------------------------------
-    # Write to CSV
-    # ---------------------------------------
+    #Write to CSV
     csv_writer.writerow([
         AS1, AS2,
         BI1, BI2, BI3,

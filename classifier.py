@@ -9,28 +9,28 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 import joblib
 
-# ---------------------------------------------------------
-# 1. LOAD AND PREPARE DATA
-# ---------------------------------------------------------
+
+#LOAD DATA
 data = pd.read_csv("lesion_features_batch.csv")
 
 # Features and labels
-X = data.drop(columns=["Label"]).values  # 8 features
+X = data.drop(columns=["Label"]).values
 y = data["Label"].values.astype(int)     # 0 = benign, 1 = malignant
 
-# Compute class weight BEFORE oversampling
+X = np.delete(X, [0, 1, 2, 3, 4], axis=1) #used for ablation study removing features
+
+
 malignant = np.sum(y)
 benign = len(y) - malignant
 pos_weight_value = benign / malignant   # used later in loss
 
-# Scale features
+#Scale features
 scaler = StandardScaler()
 X = scaler.fit_transform(X)
 
-# Save scaler
 joblib.dump(scaler, "scaler.pkl")
 
-# Oversample to balance classes
+#Oversample to balance classes
 ros = RandomOverSampler(random_state=42)
 X, y = ros.fit_resample(X, y)
 
@@ -39,26 +39,21 @@ X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.1, random_state=42, stratify=y
 )
 
-# Convert to tensor
+#Convert to tensor
 X_train = torch.tensor(X_train, dtype=torch.float32)
 y_train = torch.tensor(y_train, dtype=torch.float32).unsqueeze(1)
 X_test  = torch.tensor(X_test,  dtype=torch.float32)
 y_test  = torch.tensor(y_test,  dtype=torch.float32).unsqueeze(1)
 
-# ---------------------------------------------------------
-# 2. CREATE DATA LOADER (MINI-BATCHES)
-# ---------------------------------------------------------
 train_dataset = torch.utils.data.TensorDataset(X_train, y_train)
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
 
-# ---------------------------------------------------------
-# 3. DEFINE THE NEURAL NETWORK
-# ---------------------------------------------------------
+#DEFINE THE NEURAL NETWORK
 class LesionClassifier(nn.Module):
     def __init__(self):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(8, 64),
+            nn.Linear(3, 64),
             nn.ReLU(),
             nn.Dropout(0.2),
 
@@ -77,18 +72,14 @@ class LesionClassifier(nn.Module):
 
 model = LesionClassifier()
 
-# ---------------------------------------------------------
-# 4. LOSS + OPTIMIZER
-# ---------------------------------------------------------
+#loss and optimizer
 pos_weight = torch.tensor([pos_weight_value], dtype=torch.float32)
 
 criterion = nn.BCEWithLogitsLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+optimizer = optim.Adam(model.parameters(), lr=0.0012)
 
-# ---------------------------------------------------------
-# 5. TRAINING LOOP
-# ---------------------------------------------------------
-epochs = 600
+#training loop
+epochs = 250
 
 for epoch in range(epochs):
     model.train()
@@ -103,14 +94,15 @@ for epoch in range(epochs):
     if (epoch + 1) % 10 == 0:
         print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}")
 
-# ---------------------------------------------------------
-# 6. EVALUATION
-# ---------------------------------------------------------
+#results on test set
 model.eval()
 with torch.no_grad():
     logits = model(X_test)
     probs = torch.sigmoid(logits)    # convert logits → probabilities
-    preds_class = (probs > 0.5).float()
+    preds_class = (probs > 0.6).float()
+    
+probs_np = probs.numpy()
+y_test_np = y_test.numpy()
 
 accuracy = accuracy_score(y_test, preds_class)
 print("\nTest Accuracy:", accuracy)
@@ -121,8 +113,6 @@ print(classification_report(y_test, preds_class))
 print("\nConfusion Matrix:")
 print(confusion_matrix(y_test, preds_class))
 
-# ---------------------------------------------------------
-# 7. SAVE TRAINED MODEL
-# ---------------------------------------------------------
+#saved model
 torch.save(model.state_dict(), "lesion_classifier.pt")
 print("\nModel saved as lesion_classifier.pt")

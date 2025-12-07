@@ -50,18 +50,6 @@ def contour_sauvola(cleaned_img):
     
     # Create a mask from pixels darker than the local threshold
     binary_mask = img_gray < thresh_sauvola
-    """
-    # Create a circular mask to ignore the vignette corners
-    h, w = binary_mask.shape
-    center = (int(w/2), int(h/2))
-    radius = int(min(h, w) / 1.5) - 10 
-    
-    circle_mask = np.zeros_like(binary_mask, dtype=np.uint8)
-    cv2.circle(circle_mask, center, radius, 1, thickness=-1)
-    
-    # Apply the circle mask to your binary mask
-    binary_mask = np.logical_and(binary_mask, circle_mask)
-    """
 
     # Fill small holes and smoothe the boundary
     closed_mask = closing(binary_mask, square(5)) 
@@ -75,10 +63,6 @@ def contour_sauvola(cleaned_img):
 
 def compute_asymmetry(label_img):
     
-    #M = cv2.moments(largest_contour)
-    #cx = int(M['m10'] / M['m00'])
-    #cy = int(M['m01'] / M['m00'])
-    #bin_mask = label_img > 0
     largest_contour = label(label_img)
     props = regionprops(largest_contour)[0]
     cy, cx = props.centroid
@@ -128,13 +112,18 @@ def compute_diameter_features(mask):
 
     props = regionprops(mask.astype(np.uint8))[0]
 
+    area = props.area
     a = props.major_axis_length
     b = props.minor_axis_length
 
-    # D1: Estimated diameter (average of 2 diameters)
-    D1 = (a + b) / 2
+    #Diameter from area assuming circular region
+    d1 = np.sqrt((4 * area) / np.pi)
 
-    # D2: Difference between major/minor axes
+    #Average of major/minor axes
+    d2 = (a + b) / 2
+
+    D1 = (d1 + d2) / 2
+
     D2 = a - b
 
     return D1, D2
@@ -191,9 +180,6 @@ def rotate_to_major_axis(mask):
     # orientation is negative when object is leaning right
     angle_deg = -np.degrees(orientation)
 
-    # --- IMPORTANT ---
-    # If the major axis is VERTICAL (≈ ±90°), rotate an extra 90°
-    # This ensures the longest axis becomes horizontal
     angle_deg += 270 if angle_deg < 0 else 180
 
     # Apply rotation
@@ -251,7 +237,7 @@ if __name__ == "__main__":
     "Label"
     ])
     
-    filename = 'HAM10000\ISIC_0024449.jpg'
+    filename = 'HAM10000\ISIC_0024451.jpg'
     img = cv2.imread(filename)
     if img is not None:
         final_img = remove_hairs(img)
