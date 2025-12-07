@@ -30,7 +30,7 @@ csv_writer.writerow([
 ])
 
 for i in range(10000):
-    id = 24444 + i
+    id = 24306 + i
     filename = "ISIC_00"+str(id)+".jpg"
     img_path = f"HAM10000/{filename}"
 
