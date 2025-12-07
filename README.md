@@ -27,3 +27,6 @@ User Manual:
         Go into the file named "predict.py".
         This will use the features of the lesion in lesion_features.csv and the existing model to predict whether the lesion is benign or malignant. 
 
+Link to Video:
+
+    https://liveconcordia-my.sharepoint.com/:v:/g/personal/se_ghora_live_concordia_ca/IQAlP1uF6FM9SogVoTjv0YpSAefuhnBEC16I-xycI_Ric7A?e=xO1igq
