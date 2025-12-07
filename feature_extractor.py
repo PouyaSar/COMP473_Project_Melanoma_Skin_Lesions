@@ -237,7 +237,7 @@ def label_from_diagnosis(diagnosis_1):
 
 
 
-"""
+
 if __name__ == "__main__":
     csv_file = open("lesion_features.csv", mode="w", newline="")
     csv_writer = csv.writer(csv_file)
@@ -251,7 +251,7 @@ if __name__ == "__main__":
     "Label"
     ])
     
-    filename = 'HAM10000\ISIC_0035995.jpg'
+    filename = 'HAM10000\ISIC_0024449.jpg'
     img = cv2.imread(filename)
     if img is not None:
         final_img = remove_hairs(img)
@@ -290,12 +290,13 @@ if __name__ == "__main__":
         
 
         
-        meta = pd.read_csv("ISIC_metadata.csv")
+        meta = pd.read_csv("collection_212_metadata.csv")
 
         # Create dictionary: "ISIC_0024306" → "Benign"
         diagnosis_dict = dict(zip(meta["isic_id"], meta["diagnosis_1"]))
         
-        img_id = filename.replace(".jpg", "")  # e.g., "ISIC_0035995"
+        img_id = filename.replace(".jpg", "")
+        img_id = img_id.replace("HAM10000\\", "")# e.g., "ISIC_0035995"
         diagnosis_1 = diagnosis_dict[img_id]
 
         label = label_from_diagnosis(diagnosis_1)
@@ -307,4 +308,3 @@ if __name__ == "__main__":
             color_score,
             label
         ])
-"""

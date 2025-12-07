@@ -58,12 +58,18 @@ class LesionClassifier(nn.Module):
     def __init__(self):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(8, 32),
+            nn.Linear(8, 64),
             nn.ReLU(),
             nn.Dropout(0.2),
+
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+
             nn.Linear(32, 16),
             nn.ReLU(),
-            nn.Linear(16, 1)  # NO SIGMOID HERE
+
+            nn.Linear(16, 1)
         )
 
     def forward(self, x):
@@ -77,12 +83,12 @@ model = LesionClassifier()
 pos_weight = torch.tensor([pos_weight_value], dtype=torch.float32)
 
 criterion = nn.BCEWithLogitsLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.0005)
+optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 # ---------------------------------------------------------
 # 5. TRAINING LOOP
 # ---------------------------------------------------------
-epochs = 150
+epochs = 600
 
 for epoch in range(epochs):
     model.train()

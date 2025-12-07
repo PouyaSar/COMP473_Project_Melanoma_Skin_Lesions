@@ -37,7 +37,7 @@ csv_writer.writerow([
 # Choose image to process
 # ---------------------------------------
 
-for i in range(1500):
+for i in range(8000):
     id = 24444 + i
     filename = "ISIC_00"+str(id)+".jpg"
     img_path = f"HAM10000/{filename}"
